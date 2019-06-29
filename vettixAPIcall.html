@@ -1,0 +1,60 @@
+<html>
+<head>
+</head>
+<body>
+<div id='vettix'></div>
+
+<script>
+var query = window.location.search;
+if (query.substring(0, 1) == '?') { query = query.substring(1); }
+var data = query.split(','); 
+
+var limit = 10;
+
+if(data[0].split('=')[0])
+    limit = data[0].split('=')[1];
+
+var url = "https://www.vettix.org/sandbox/api/tm-events.php?limit="+limit;
+var hdr = "HTTP_CUSTOM_VETTIX";
+var key = "aoekjr02%weragwkL51";
+
+function httpGet(url,key)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", url, false );
+    xmlHttp.setRequestHeader(hdr,key);
+    xmlHttp.send(null);
+
+    //document.getElementById('vettix').innerHTML = xmlHttp.responseText;
+
+    var evtTimeZnNY = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+
+    alert(evtTimeZnNY); //set timezone
+    alert(new Date(evtTimeZnNY)); 
+
+    var json = JSON.parse(xmlHttp.responseText);
+
+    document.write("<table border=1><tr><th>eventId</th><th>eventDate</th><th>eventTime</th><th>venueId</th><th>timeZone</th></tr>")
+    
+    for(var i = 0;i<json['count'];i++) 
+    {
+
+        if(json['events'][i].offers[0]['enabled'] === true &&
+             json['events'][i].timeZone == "America/New_York" &&
+             new Date(json['events'][i].eventDate+" "+json['events'][i].eventTime) > new Date(evtTimeZnNY) )
+        {
+            document.write("<tr><td>"+json.events[i].eventId+"</td>"+
+            "<td>"+json['events'][i].eventDate+"</td>"+
+            "<td>"+json['events'][i].eventTime+"</td>"+
+            "<td>"+json['events'][i].venueId+"</td>"+
+            "<td>"+json['events'][i].timeZone+"</td></tr>");
+        }
+    } 
+    document.write("</table>");    
+}
+
+httpGet(url,key);
+</script>
+</body>
+</html>
+
