@@ -29,9 +29,6 @@ function httpGet(url,key)
 
     var evtTimeZnNY = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
 
-    alert(evtTimeZnNY); //set timezone
-    alert(new Date(evtTimeZnNY)); 
-
     var json = JSON.parse(xmlHttp.responseText);
 
     document.write("<table border=1><tr><th>eventId</th><th>eventDate</th><th>eventTime</th><th>venueId</th><th>timeZone</th></tr>")
