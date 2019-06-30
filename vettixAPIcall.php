@@ -17,6 +17,7 @@ table tr:nth-child(even) {
 </style>
 </head>
 <body>
+<div id='vettix'></div>
 
 <?php
 
@@ -59,26 +60,33 @@ $context = stream_context_create(array(
 $result = file_get_contents($url."?limit=".$limit, false, $context);
 
 $json = json_decode($result);//turn string to json object
+$cnt = 1;
 
 echo "<table><tr>".
-        "<th>eventId</th>".
-        "<th>venueId</th>".
-        "<th>Local Time/Time Zone</th>".
-        "<th> Eastern Standard Time </th></tr>";
+        "<th>Event Id</th>".
+        "<th>Venue Id</th>".
+        "<th>Event Local Time</th>".
+        "<th>Eastern Standard Time</th></tr>";
 
 for($i=0;$i<$json->count;$i++){
 
     $evtTime = $json->events[$i]->eventDate." ".$json->events[$i]->eventTime;
-    $offset = get_timezone_offset($json->events[$i]->timeZone,'America/New_York')/3600;
-    $EST = add_hours_to_timestamp($offset,$evtTime);
+    $evtTZ   = $json->events[$i]->timeZone;    
 
-    if($json->events[$i]->offers[0]->enabled === true && time() < strtotime($evtTime) )        
-    {   
+    if($json->events[$i]->offers[0]->enabled === true 
+        && time() <= strtotime($evtTime))
+    {
+
+        $offset = get_timezone_offset($evtTZ,'America/New_York')/3600;
+        $EST = add_hours_to_timestamp($offset,$evtTime);
+        $cnt++;
+
         echo "<tr><td>".$json->events[$i]->eventId."</td>".
         "<td>".$json->events[$i]->venueId."</td>".       
-        "<td>".$json->events[$i]->eventDate." ".$json->events[$i]->eventTime."<br>".$json->events[$i]->timeZone."</td>".       
+        "<td>".$evtTime."</td>".       
         "<td>".date("Y-m-d H:i:s", $EST)."</td></tr>";
     }
+    //echo "<script> document.getElementById('vettix').innerHTML = '<b>".($cnt-1)." Event(s) Found.</b><br>'; </script>";  
 }
 echo "</table>";
 
