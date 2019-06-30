@@ -1,16 +1,18 @@
 <html>
 <head>
 <style>
-table, th , td  {
-  border: 1px solid grey;
-  border-collapse: collapse;
-  padding: 5px;
+table, th , td {
+    border: 1px solid grey;
+    border-collapse: collapse;
+    padding: 5px;
 }
+
 table tr:nth-child(odd) {
-  background-color: #f1f1f1;
+    background-color: #f1f1f1;
 }
+
 table tr:nth-child(even) {
-  background-color: #ffffff;
+    background-color: #ffffff;
 }
 </style>
 </head>
@@ -20,12 +22,24 @@ table tr:nth-child(even) {
 
 date_default_timezone_set("America/New_York");
 
-function checkTime($evtTime){  
-    if(time() < strtotime($evtTime))
-        return "No";
-    else
-        return "YES";  
+function get_timezone_offset($remote_tz, $origin_tz = null) {
+    if($origin_tz === null) {
+        if(!is_string($origin_tz = date_default_timezone_get())) {
+            return false; // A UTC timestamp was returned -- bail out!
+        }
+    }
+    $origin_dtz = new DateTimeZone($origin_tz);
+    $remote_dtz = new DateTimeZone($remote_tz);
+    $origin_dt = new DateTime("now", $origin_dtz);
+    $remote_dt = new DateTime("now", $remote_dtz);
+    $offset = $origin_dtz->getOffset($origin_dt) - $remote_dtz->getOffset($remote_dt);
+    return $offset;
 }
+
+function add_hours_to_timestamp($offset,$timestamp){
+    return strtotime($timestamp)+ ($offset*3600);
+}
+
 
 $limit = 10;
 if(isset($_GET['limit']) & !empty($_GET['limit']))
@@ -46,32 +60,29 @@ $result = file_get_contents($url."?limit=".$limit, false, $context);
 
 $json = json_decode($result);//turn string to json object
 
-echo "<table border=1><tr><th>eventId</th>".
-                        "<th>eventDate</th>".
-                        "<th>eventTime</th>".
-                        "<th>venueId</th>".
-                        "<th>timeZone</th>".
-                        "<th> Expired </th></tr>";
+echo "<table><tr>".
+        "<th>eventId</th>".
+        "<th>venueId</th>".
+        "<th>Local Time/Time Zone</th>".
+        "<th> Eastern Standard Time </th></tr>";
+
 for($i=0;$i<$json->count;$i++){
 
-    if($json->events[$i]->offers[0]->enabled === true && 
-        $json->events[$i]->timeZone == "America/New_York")
-    {     
+    $evtTime = $json->events[$i]->eventDate." ".$json->events[$i]->eventTime;
+    $offset = get_timezone_offset($json->events[$i]->timeZone,'America/New_York')/3600;
+    $EST = add_hours_to_timestamp($offset,$evtTime);
 
+    if($json->events[$i]->offers[0]->enabled === true && time() < strtotime($evtTime) )        
+    {   
         echo "<tr><td>".$json->events[$i]->eventId."</td>".
-        "<td>".$json->events[$i]->eventDate."</td>".
-        "<td>".$json->events[$i]->eventTime."</td>".
         "<td>".$json->events[$i]->venueId."</td>".       
-        "<td>".$json->events[$i]->timeZone."</td>".
-        "<td>".checkTime($json->events[$i]->eventDate." ".$json->events[$i]->eventTime)."</td></tr>";
+        "<td>".$json->events[$i]->eventDate." ".$json->events[$i]->eventTime."<br>".$json->events[$i]->timeZone."</td>".       
+        "<td>".date("Y-m-d H:i:s", $EST)."</td></tr>";
     }
-
 }
 echo "</table>";
 
 ?>
-
-<div id='vettix'><?php echo $json->count; ?></div>
 </body>
 </html>
 

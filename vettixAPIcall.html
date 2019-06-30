@@ -1,70 +1,152 @@
 <html>
 <head>
 <style>
-table, th , td  {
-  border: 1px solid grey;
-  border-collapse: collapse;
-  padding: 5px;
+table, th , td {
+    border: 1px solid grey;
+    border-collapse: collapse;
+    padding: 5px;
 }
+
 table tr:nth-child(odd) {
-  background-color: #f1f1f1;
+    background-color: #f1f1f1;
 }
+
 table tr:nth-child(even) {
-  background-color: #ffffff;
+    background-color: #ffffff;
 }
 </style>
 </head>
 <body>
 <div id='vettix'></div>
-
 <script>
+
+//Get URI string
 var query = window.location.search;
 if (query.substring(0, 1) == '?') { query = query.substring(1); }
 var data = query.split(','); 
 
-var limit = 10;
+//preset initial limit value
+var limit = 30;
 
-if(data[0].split('=')[0])
-    limit = data[0].split('=')[1];
+//Get limit value
+if(data[0].split('=')[0]){
+    if(data[0].split('=')[0] === "limit")
+        limit = data[0].split('=')[1];
 
-var url = "https://www.vettix.org/sandbox/api/tm-events.php?limit="+limit;
-var hdr = "HTTP_CUSTOM_VETTIX";
-var key = "aoekjr02%weragwkL51";
+}    
 
-function httpGet(url,key)
-{
+
+
+//Adjusting hours to local timezone
+Date.prototype.addHours = function(h) {    
+   this.setTime(this.getTime() + (h*60*60*1000)); 
+   return this;   
+}
+
+//Formatting MM/DD/YYYY, HH:MM:SS AMPM
+String.prototype.formatMDYHMS = function(pattern){
+
+	var tmpArr = this.split(" "); 
+    var td = tmpArr[0].split("-"); 
+    var hr = tmpArr[1].split(":");
+    var AMPM = "AM";
+
+    if(hr[0] > 12)
+    {
+        hr[0] = hr[0]-12;
+        AMPM = "PM";
+    } 
+    return td[1]+"/"+td[2]+"/"+td[0]+", "+hr[0]+":"+ hr[1]+":"+ hr[2]+" "+AMPM;	
+}
+
+//Formatting YYYY-MM-DD HH:MM:SS
+String.prototype.formatYMDHMS = function(pattern){
+
+	var tmpArr = this.replace(",","").split(" ");
+    var td = tmpArr[0].split("/"); 
+    var hr = tmpArr[1].split(":");
+    var ampm=tmpArr[2];
+
+    if(td[0].length == 1) td[0] = "0"+td[0];
+    if(hr[0].length == 1) hr[0] = "0"+hr[0];
+    if(td[1].length == 1) td[1] = "0"+td[1];    
+
+    if(ampm === "PM")
+    {
+        hr[0] = parseInt(hr[0])+12;
+    }     
+    return  td[2]+"-"+td[0]+"-"+td[1]+" "+hr[0]+":"+hr[1]+":"+hr[2];
+}
+
+//US Time Zone Handler Version 1, need to add DST calculation, and new zones.
+function usTZhandler(curtz,tgtz) {
+    
+    var usTZobj = {"America/Honolulu":      [-10,true],
+                   "America/Anchorage":     [-8,true],
+                   "America/Los_Angeles":   [-7,true],
+                   "America/Boise":         [-7,true],
+                   "America/Phoenix":       [-7,false],
+                   "America/Denver":        [-6,true],
+                   "America/Salt_Lake_City":[-6,true],
+                   "America/Chicago":       [-5,true],
+                   "America/Detroit":       [-5,true],
+                   "America/Indianapolis":  [-4,true],
+                   "America/New_York":      [-4,true]
+    };              
+    return (usTZobj[tgtz][0] - usTZobj[curtz][0]);      
+}
+
+//Function calling Vettix API
+function init(){
+
+    //API call variables
+    var url = "https://www.vettix.org/sandbox/api/tm-events.php?limit="+limit;
+    var hdr = "HTTP_CUSTOM_VETTIX";
+    var key = "aoekjr02%weragwkL51";
+
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open( "GET", url, false );
     xmlHttp.setRequestHeader(hdr,key);
     xmlHttp.send(null);
 
-    //document.getElementById('vettix').innerHTML = xmlHttp.responseText;
-
-    var evtTimeZnNY = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
-
+    //document.getElementById('vettix').innerHTML = xmlHttp.responseText; 
     var json = JSON.parse(xmlHttp.responseText);
 
-    document.write("<table border=1><tr><th>eventId</th><th>eventDate</th><th>eventTime</th><th>venueId</th><th>timeZone</th></tr>")
+    document.write("<table><tr><th>#</th><th>Event Id</th><th>Venue Id</th><th>Local Time/Time Zone</th><th>East Standard Time</th></tr>");
     
-    for(var i = 0;i<json['count'];i++) 
-    {
+    for(var i = 0, j=1;i<json['count'];i++){
 
-        if(json['events'][i].offers[0]['enabled'] === true &&
-             json['events'][i].timeZone == "America/New_York" &&
-             new Date(json['events'][i].eventDate+" "+json['events'][i].eventTime) > new Date(evtTimeZnNY) )
-        {
-            document.write("<tr><td>"+json.events[i].eventId+"</td>"+
-            "<td>"+json['events'][i].eventDate+"</td>"+
-            "<td>"+json['events'][i].eventTime+"</td>"+
-            "<td>"+json['events'][i].venueId+"</td>"+
-            "<td>"+json['events'][i].timeZone+"</td></tr>");
+        var eLocalTime = json.events[i].eventDate+" "+json.events[i].eventTime;
+        var sCurrTime = new Date().toLocaleString("en-US", {timeZone: json.events[i].timeZone}).formatYMDHMS();
+
+        //Get offset hours from EST
+        var offset = usTZhandler((json.events[i].timeZone).toString(),"America/New_York");
+
+        //Calculated EST hour by addin offset hours to local time zone and reformatted
+        var EST = new Date(eLocalTime).addHours(offset).toLocaleString().formatYMDHMS();
+
+        //Show only the unexpired offering events
+        if(json['events'][i].offers[0]['enabled'] === true && new Date(eLocalTime) > new Date(sCurrTime) )
+        {            
+            document.write("<tr><td>"+j+"</td>"+
+            "<td>"+json.events[i].eventId+"</td>"+
+            "<td>"+json.events[i].venueId+"</td>"+       
+            "<td>"+eLocalTime+"<br>"+json.events[i].timeZone+"</td>"+              
+            "<td>"+EST+"</td></tr>");
+            j++; 
         }
     } 
     document.write("</table>");    
 }
 
-httpGet(url,key);
+window.onload = init();
+
 </script>
+
+
+
+
+
 </body>
 </html>
 
