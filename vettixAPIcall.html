@@ -49,20 +49,21 @@ String.prototype.formatYMDHMS = function(pattern){
 	var tmpArr = this.replace(",","").split(" ");
     var td = tmpArr[0].split("/"); 
     var hr = tmpArr[1].split(":");
-    var ampm=tmpArr[2];
+    var ampm=tmpArr[2];  
 
-    if(td[0].length == 1) td[0] = "0"+td[0];
-    if(hr[0].length == 1) hr[0] = "0"+hr[0];
-    if(td[1].length == 1) td[1] = "0"+td[1];    
-
-    if(ampm === "PM" && parseInt(hr[0]) < 12)
+    if(ampm == "PM" && parseInt(hr[0]) < 12)
     {   
         hr[0] = parseInt(hr[0])+12;
     } 
-    if(ampm === "AM" && parseInt(hr[0]) == 12)
+    if(ampm == "AM" && parseInt(hr[0]) == 12)
     {   
-        hr[0] = '00';
+        hr[0] = "00";
     } 
+
+    if(td[0].length == 1) td[0] = "0"+td[0];    
+    if(td[1].length == 1) td[1] = "0"+td[1];    
+    if(td[2].length == 1) td[2] = "0"+td[2]; 
+    if(hr[0].length == 1) hr[0] = "0"+hr[0];   
 
     return  td[2]+"-"+td[0]+"-"+td[1]+" "+hr[0]+":"+hr[1]+":"+hr[2];
 }
@@ -120,7 +121,7 @@ if (query.substring(0, 1) == '?') { query = query.substring(1); }
 var data = query.split(','); 
 
 //preset initial limit value
-var limit = 75;
+var limit = 100;
 
 //Get limit value
 if(data[0].split('=')[0]){
@@ -132,25 +133,20 @@ if(data[0].split('=')[0]){
 function init(){
 
         //API call variables
-    var url = encodeURI("https://www.vettix.org/sandbox/api/tm-events.php?limit="+limit);
+    var url = encodeURI("https:\/\/www.vettix.org\/sandbox\/api\/tm-events.php?limit="+limit);
     var hdr = "HTTP_CUSTOM_VETTIX";
     var key = "aoekjr02%weragwkL51";
 
     var xmlHttp;
-    if (window.XMLHttpRequest) // firefox etc 
-    {
-            xmlHttp = new XMLHttpRequest();
-    } else if (window.ActiveXObject) { // ie
-            xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
-    }
-    
-    xmlHttp.open("GET", url, false);   
-    xmlHttp.setRequestHeader(hdr, key);  
-    xmlHttp.setRequestHeader('Access-Control-Allow-Origin', 'www.mingledin.com');
-    xmlHttp.setRequestHeader('Access-Control-Allow-Credentials', true);
-    xmlHttp.setRequestHeader('Access-Control-Allow-Headers', 'Content-Type');
-    xmlHttp.setRequestHeader('Content-Type', 'application/json');    
-    xmlHttp.send();
+    if (window.XMLHttpRequest){
+
+        xmlHttp = new XMLHttpRequest(); 
+		xmlHttp.open('GET', url,false);   
+        xmlHttp.setRequestHeader(hdr, key); 
+        xmlHttp.send(null);
+
+    } else
+		alert("Your Browser not support XMLHttpRequest"); 
 
     if(xmlHttp.status == 0){
         document.getElementById('vettix').innerHTML = "Access is Denied."; 
