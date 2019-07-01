@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>  
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width,height=device-height, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+table, th , td  {
+  border: 1px solid grey;
+  border-collapse: collapse;
+  padding: 5px;
+}
+table tr:nth-child(odd) {
+  background-color: #f1f1f1;
+}
+table tr:nth-child(even) {
+  background-color: #ffffff;
+}
+</style>
+<script>
+/* Get URI string */
+var query = window.location.search;
+if (query.substring(0, 1) == '?') { query = query.substring(1); }
+var data = query.split(','); 
+
+/* preset initial limit value */
+var limit = 75;
+
+/* Get limit value */
+if(data[0].split('=')[0]){
+    if(data[0].split('=')[0] === "limit")
+        limit = data[0].split('=')[1];
+} 
+
+/**************  FUNCTIONS *************/    
+/* Adjusting hours to local timezone   */
+/***************************************/
+Date.prototype.addHours = function(h) {    
+   this.setTime(this.getTime() + (h*60*60*1000)); 
+   return this;   
+}
+
+/* Formatting from YYYY-MM-DD HH:MM:SS -> MM/DD/YYYY, HH:MM:SS AMPM */
+String.prototype.formatMDYHMS = function(pattern){
+
+	var tmpArr = this.split(" "); 
+    var td = tmpArr[0].split("-"); 
+    var hr = tmpArr[1].split(":");
+    var AMPM = "AM";
+
+    if(hr[0] > 12)
+    {
+        hr[0] = hr[0]-12;
+        AMPM = "PM";
+    } 
+    return td[1]+"/"+td[2]+"/"+td[0]+", "+hr[0]+":"+ hr[1]+":"+ hr[2]+" "+AMPM;	
+}
+
+/* Formatting from MM/DD/YYYY, HH:MM:SS AMPM -> YYYY-MM-DD HH:MM:SS */
+String.prototype.formatYMDHMS = function(pattern){
+
+	var tmpArr = this.replace(",","").split(" ");
+    var td = tmpArr[0].split("/"); 
+    var hr = tmpArr[1].split(":");
+    var ampm=tmpArr[2];  
+
+    if(ampm == "PM" && parseInt(hr[0]) < 12)
+    {   
+        hr[0] = parseInt(hr[0])+12;
+    } 
+    if(ampm == "AM" && parseInt(hr[0]) == 12)
+    {   
+        hr[0] = "00";
+    } 
+
+    if(td[0].length == 1) td[0] = "0"+td[0];    
+    if(td[1].length == 1) td[1] = "0"+td[1];    
+    if(td[2].length == 1) td[2] = "0"+td[2]; 
+    if(hr[0].length == 1) hr[0] = "0"+hr[0];   
+
+    return  td[2]+"-"+td[0]+"-"+td[1]+" "+hr[0]+":"+hr[1]+":"+hr[2];
+}
+
+/* Calculate Daylight Saving Time (DST) */
+function dstHandler(){
+    var d = new Date();
+    var offset = 0;
+   
+    /* March DST (2nd Sunday at 2 AM) */
+    if(d.getMonth() == 2){
+        if(d.getDate() >= 7 && d.getDate() < 14 && d.getDay() == 0 && d.getHour() == 1)
+        offset = 1; //move forward an hour
+    }
+    /* November DST (1st Sunday at 2 AM) */
+    if(d.getMonth() == 10){
+        if(d.getDate() < 8 && d.getDay() == 0 && d.getHour() == 1)
+        offset = -1; //move back an hour
+    }
+    return offset;
+}
+
+//US Time Zone Handler Version 1, need to add new zones as needed.
+function usTZhandler(curtz,tgtz) {
+
+    //id no DST observer then it is false no offset required
+    var usTZobj = {"America/Honolulu":      [-10 ,false],
+                   "America/Anchorage":     [-8 + dstHandler(),true],
+                   "America/Los_Angeles":   [-7 + dstHandler(),true],
+                   "America/Boise":         [-7 + dstHandler(),true],
+                   "America/Phoenix":       [-7 ,false],
+                   "America/Denver":        [-6 + dstHandler(),true],
+                   "America/Salt_Lake_City":[-6 + dstHandler(),true],
+                   "America/Chicago":       [-5 + dstHandler(),true],
+                   "America/Detroit":       [-5 + dstHandler(),true],
+                   "America/Indianapolis":  [-4 + dstHandler(),true],
+                   "America/New_York":      [-4 + dstHandler(),true]
+    };      
+
+    if(usTZobj[curtz])        
+        return (usTZobj[tgtz][0] - usTZobj[curtz][0]);
+    else    
+        return 0;          
+}
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+</head>
+<body>
+
+<div ng-app="myApp" ng-controller="customersCtrl"> 
+
+  <table>
+    <tr><th>Event Id</th><th>Venue Id</th><th>Event Local Time</th><th>Eastern Standard Time</th></tr>
+
+    <tr ng-repeat="x in events" ng-class="offersClass( x.offers[0].enabled, x.eventDate, x.eventTime, x.timeZone)" >      
+      <td>{{ x.eventId }}</td>
+      <td>{{ x.venueId }}</td>
+      <td>{{ x.eventDate }} {{ x.eventTime }}</td>      
+      <td>{{ getEST(x.eventDate, x.eventTime, x.timeZone) }}</td>
+    </tr>
+  </table>
+
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('customersCtrl', function($scope, $http) {	
+    
+  $http({
+    method: 'GET',
+    url: "https://www.vettix.org/sandbox/api/tm-events.php?limit="+limit,
+    headers: {'HTTP_CUSTOM_VETTIX': 'aoekjr02%weragwkL51'}
+  }).then(function (response) {        
+    $scope.events = response.data['events'];
+
+    $scope.offersClass = function (_of,_dt,_tm,_tz) {
+      var eLocalTime = _dt+" "+_tm;
+      var sCurrTime = new Date().toLocaleString("en-US", {timeZone: _tz});    
+      //Show only the unexpired offering events
+      if(_of && new Date(eLocalTime) > new Date(sCurrTime)){       
+        return 'ng-show';
+      }else {
+        return 'ng-hide';
+      } 
+    };  
+
+    $scope.getEST = function (_dt,_tm,_tz) {
+      var offset = usTZhandler((_tz).toString(),"America/New_York");
+      //Calculated EST hour by addin offset hours to local time zone and reformatted
+      return new Date((_dt+" "+_tm)).addHours(offset).toLocaleString().formatYMDHMS();
+    };  
+  });
+});
+</script>
+
+</body>
+</html>
