@@ -41,11 +41,6 @@ function get_timezone_offset($remote_tz, $origin_tz = null) {
     return $offset;
 }
 
-function add_hours_to_timestamp($offset,$timestamp){
-    return strtotime($timestamp)+ ($offset*3600);
-}
-
-
 $limit = 100;
 if(isset($_GET['limit']) & !empty($_GET['limit']))
 {	
@@ -82,7 +77,7 @@ for($i=0;$i<$json->count;$i++){
     {
 
         $offset = get_timezone_offset($evtTZ,'America/New_York')/3600;
-        $EST = add_hours_to_timestamp($offset,$evtTime);
+        $EST = strtotime($evtTime)+ ($offset*3600);
         $cnt++;
 
         echo "<tr><td>".$json->events[$i]->eventId."</td>".

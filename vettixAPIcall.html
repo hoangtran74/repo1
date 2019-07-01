@@ -19,54 +19,13 @@ table tr:nth-child(even) {
     background-color: #ffffff;
 }
 </style>
-<script>
-    
+<script>    
 //Adjusting hours to local timezone
 Date.prototype.addHours = function(h) {    
    this.setTime(this.getTime() + (h*60*60*1000)); 
    return this;   
 }
 
-//Formatting from YYYY-MM-DD HH:MM:SS -> MM/DD/YYYY, HH:MM:SS AMPM
-String.prototype.formatMDYHMS = function(pattern){
-
-	var tmpArr = this.split(" "); 
-    var td = tmpArr[0].split("-"); 
-    var hr = tmpArr[1].split(":");
-    var AMPM = "AM";
-
-    if(hr[0] > 12)
-    {
-        hr[0] = hr[0]-12;
-        AMPM = "PM";
-    } 
-    return td[1]+"/"+td[2]+"/"+td[0]+", "+hr[0]+":"+ hr[1]+":"+ hr[2]+" "+AMPM;	
-}
-
-//Formatting from MM/DD/YYYY, HH:MM:SS AMPM -> YYYY-MM-DD HH:MM:SS
-String.prototype.formatYMDHMS = function(pattern){
-
-	var tmpArr = this.replace(",","").split(" ");
-    var td = tmpArr[0].split("/"); 
-    var hr = tmpArr[1].split(":");
-    var ampm=tmpArr[2];  
-
-    if(ampm == "PM" && parseInt(hr[0]) < 12)
-    {   
-        hr[0] = parseInt(hr[0])+12;
-    } 
-    if(ampm == "AM" && parseInt(hr[0]) == 12)
-    {   
-        hr[0] = "00";
-    } 
-
-    if(td[0].length == 1) td[0] = "0"+td[0];    
-    if(td[1].length == 1) td[1] = "0"+td[1];    
-    if(td[2].length == 1) td[2] = "0"+td[2]; 
-    if(hr[0].length == 1) hr[0] = "0"+hr[0];   
-
-    return  td[2]+"-"+td[0]+"-"+td[1]+" "+hr[0]+":"+hr[1]+":"+hr[2];
-}
 
 //Calculate Daylight Saving Time (DST)
 function dstHandler(){
@@ -175,7 +134,7 @@ function init(){
                 var offset = usTZhandler((json.events[i].timeZone).toString(),"America/New_York");
 
                 //Calculated EST hour by addin offset hours to local time zone and reformatted
-                var EST = new Date(eLocalTime).addHours(offset).toLocaleString().formatYMDHMS();
+                var EST = new Date(eLocalTime).addHours(offset-7).toISOString().replace(/T|.000Z/g," ");
                 cnt++; 
 
                 document.write("<tr>"+
