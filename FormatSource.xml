@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog>
+	<format ><ext>PDF</ext>   <str>PDF</str></format>
+	<format ><ext>MSTP</ext>    <str>MSG</str></format>
+	<format ><ext>PK</ext>    <str>ZIP</str></format>
+	<format ><ext>MZ</ext>  <str>EXE</str></format>
+</catalog>	
+
+
